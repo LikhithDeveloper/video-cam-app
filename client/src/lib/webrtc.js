@@ -1,0 +1,109 @@
+/**
+ * WebRTC settings, tuned for the lowest possible latency.
+ *
+ * Where the latency savings come from:
+ *  1. Peer-to-peer: video goes straight between the two browsers, no server hop.
+ *  2. Trickle ICE + candidate pool: connection paths are gathered early and sent
+ *     as soon as they're found, so the call connects faster.
+ *  3. max-bundle / rtcp-mux: audio + video share one network connection.
+ *  4. Minimal jitter buffer on the receiver: frames are played as soon as they
+ *     arrive instead of being held back "just in case".
+ *  5. "maintain-framerate": on a weak network the browser lowers resolution
+ *     instead of buffering or dropping frames, so motion stays real-time.
+ */
+
+// ---- ICE servers ----------------------------------------------------------
+// STUN lets each browser discover its public address (free, public servers).
+// TURN is a relay fallback for strict firewalls — configure it in client/.env.
+const iceServers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+
+if (import.meta.env.VITE_TURN_URL) {
+  iceServers.push({
+    urls: import.meta.env.VITE_TURN_URL,
+    username: import.meta.env.VITE_TURN_USERNAME,
+    credential: import.meta.env.VITE_TURN_CREDENTIAL,
+  });
+}
+
+export const RTC_CONFIG = {
+  iceServers,
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
+  iceCandidatePoolSize: 4,
+};
+
+// ---- Camera & microphone --------------------------------------------------
+export const MEDIA_CONSTRAINTS = {
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  },
+  video: {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30, max: 30 },
+    facingMode: 'user',
+  },
+};
+
+const MAX_VIDEO_BITRATE = 2_500_000; // 2.5 Mbps is plenty for 720p
+
+/** Ask the browser to favour smooth, real-time video for an outgoing track. */
+export async function tuneSenderForLowLatency(sender) {
+  if (!sender.track) return;
+
+  const params = sender.getParameters();
+  if (sender.track.kind === 'video') {
+    params.degradationPreference = 'maintain-framerate';
+  }
+  for (const encoding of params.encodings ?? []) {
+    encoding.priority = 'high';
+    encoding.networkPriority = 'high';
+    if (sender.track.kind === 'video') encoding.maxBitrate = MAX_VIDEO_BITRATE;
+  }
+
+  try {
+    await sender.setParameters(params);
+  } catch (err) {
+    // Not every browser supports every option — the call still works without them.
+    console.warn('Could not apply sender tuning:', err);
+  }
+}
+
+/** Play incoming audio/video with the smallest possible buffer delay. */
+export function tuneReceiverForLowLatency(receiver) {
+  if ('jitterBufferTarget' in receiver) {
+    receiver.jitterBufferTarget = 0; // modern Chrome/Edge (milliseconds)
+  } else if ('playoutDelayHint' in receiver) {
+    receiver.playoutDelayHint = 0; // older Chrome (seconds)
+  }
+}
+
+/** Current network round-trip time between the two peers, in milliseconds. */
+export async function getRoundTripTimeMs(peerConnection) {
+  const stats = await peerConnection.getStats();
+  let seconds = null;
+
+  stats.forEach((report) => {
+    const isActivePair = report.type === 'candidate-pair' && report.state === 'succeeded' && (report.nominated || report.selected);
+    if (isActivePair && report.currentRoundTripTime != null) seconds = report.currentRoundTripTime;
+  });
+
+  return seconds == null ? null : Math.round(seconds * 1000);
+}
+
+/** Turn getUserMedia errors into a message a user understands. */
+export function describeMediaError(err) {
+  switch (err?.name) {
+    case 'NotAllowedError':
+      return 'Camera/microphone permission was denied. Allow access in your browser and try again.';
+    case 'NotFoundError':
+      return 'No camera or microphone was found on this device.';
+    case 'NotReadableError':
+      return 'Your camera is being used by another app. Close it and try again.';
+    default:
+      if (!window.isSecureContext) return 'Camera access needs HTTPS. Open the app over https:// or on localhost.';
+      return `Could not start camera: ${err?.message ?? err}`;
+  }
+}

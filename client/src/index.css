@@ -1,0 +1,605 @@
+/* =========================================================================
+   Theme
+   ========================================================================= */
+:root {
+  --bg-1: #0b1023;
+  --bg-2: #1a1042;
+  --accent-1: #8b5cf6; /* violet */
+  --accent-2: #06b6d4; /* cyan */
+  --danger: #ef4444;
+  --text: #f1f5f9;
+  --text-muted: #a5b4cf;
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --radius: 20px;
+
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 20% 10%, #2a1a6b 0%, transparent 45%),
+    radial-gradient(circle at 85% 90%, #0e4a63 0%, transparent 45%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================================================================
+   Bubble background
+   ========================================================================= */
+.bubbles {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bubble {
+  position: absolute;
+  bottom: calc(var(--size) * -1.5);
+  left: var(--left);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    hsla(var(--hue), 100%, 90%, 0.55),
+    hsla(var(--hue), 90%, 60%, 0.18) 45%,
+    hsla(var(--hue), 90%, 50%, 0.05) 70%
+  );
+  border: 1px solid hsla(var(--hue), 100%, 85%, 0.25);
+  box-shadow: inset 0 0 20px hsla(var(--hue), 100%, 80%, 0.2), 0 0 30px hsla(var(--hue), 100%, 60%, 0.12);
+  animation: rise var(--duration) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+/* Little shine highlight on each bubble */
+.bubble::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: 22%;
+  width: 22%;
+  height: 14%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: rotate(-35deg);
+  filter: blur(1px);
+}
+
+@keyframes rise {
+  0% {
+    transform: translate(0, 0) scale(0.9);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(var(--drift), -55vh) scale(1);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--drift) * -0.5), -120vh) scale(1.08);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation-duration: 120s;
+  }
+}
+
+/* =========================================================================
+   Buttons & inputs
+   ========================================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+.btn-primary:not(:disabled):hover {
+  box-shadow: 0 14px 36px rgba(6, 182, 212, 0.45);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.field span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field input:focus {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+}
+
+.code-input {
+  text-align: center;
+  font-size: 1.6rem !important;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+}
+
+/* =========================================================================
+   Home screen
+   ========================================================================= */
+.home {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.card {
+  width: min(420px, 100%);
+  padding: 36px 32px;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  animation: pop-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff, #c4b5fd 50%, #67e8f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.logo-bubble {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff 0 12%, transparent 13%),
+    linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.tagline {
+  color: var(--text-muted);
+  margin-top: -10px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+/* =========================================================================
+   Call screen
+   ========================================================================= */
+.call {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 14px;
+}
+
+.call-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  flex-wrap: wrap;
+}
+
+.code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #facc15;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.status-connected .dot {
+  background: #22c55e;
+  animation: none;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.latency {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.latency-good {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+.latency-ok {
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde047;
+}
+.latency-bad {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ---- Video tiles ---- */
+.video-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-tile video.mirrored {
+  transform: scaleX(-1);
+}
+
+.video-tile video.hidden {
+  visibility: hidden;
+}
+
+.video-tile.remote {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--glass-border);
+  animation: pop-in 0.5s ease;
+}
+
+.video-tile.local {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: clamp(120px, 22vw, 260px);
+  aspect-ratio: 4 / 3;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.avatar {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.avatar span {
+  display: grid;
+  place-items: center;
+  width: 38%;
+  max-width: 140px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: clamp(1.5rem, 6vw, 3.5rem);
+  font-weight: 800;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.45) 0 10%, transparent 11%),
+    linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.5);
+  animation: float 3s ease-in-out infinite;
+}
+
+.name-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.name-tag svg {
+  width: 14px;
+  height: 14px;
+  color: #fca5a5;
+}
+
+/* ---- Waiting card ---- */
+.waiting {
+  position: relative;
+  width: min(480px, 100%);
+  padding: 32px 28px;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  animation: pop-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  overflow: hidden;
+}
+
+.waiting-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.code-boxes {
+  display: flex;
+  gap: 8px;
+}
+
+.code-box {
+  display: grid;
+  place-items: center;
+  width: clamp(40px, 11vw, 56px);
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 800;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  animation: bob 2.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.12s);
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-6px);
+    border-color: var(--accent-2);
+  }
+}
+
+.waiting-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.waiting-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.pulse-ring {
+  position: absolute;
+  inset: auto;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-2);
+  opacity: 0;
+  animation: pulse 2.5s ease-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+/* ---- Controls ---- */
+.controls {
+  align-self: center;
+  display: flex;
+  gap: 16px;
+  padding: 12px 20px;
+  border-radius: 999px;
+}
+
+.control {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.control:hover {
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.control.off {
+  background: rgba(255, 255, 255, 0.9);
+  color: #111827;
+}
+
+.control.hangup {
+  background: var(--danger);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45);
+}
+
+.control.hangup:hover {
+  background: #dc2626;
+}
+
+/* ---- Small screens (phones) ---- */
+@media (max-width: 600px) {
+  .call {
+    padding: 10px;
+  }
+  .video-tile.local {
+    right: 10px;
+    bottom: 10px;
+    aspect-ratio: 3 / 4;
+    width: 32vw;
+  }
+  .waiting-actions {
+    flex-direction: column;
+  }
+}

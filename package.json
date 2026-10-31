@@ -1,0 +1,15 @@
+{
+  "name": "bubble-call",
+  "private": true,
+  "description": "Peer-to-peer video calling with React + WebRTC",
+  "scripts": {
+    "postinstall": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:https": "concurrently -n server,client -c magenta,cyan \"npm run dev --prefix server\" \"npm run dev:https --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}
