@@ -71,6 +71,28 @@ export async function tuneSenderForLowLatency(sender) {
   }
 }
 
+/**
+ * Prefer the VP8 video codec. Every browser decodes VP8 in software, while
+ * H.264 relies on phone hardware decoders that can show black video between
+ * different devices (e.g. iPhone <-> Android). Must be called after addTrack.
+ */
+export function preferVp8Codec(peerConnection) {
+  const codecs = RTCRtpReceiver.getCapabilities?.('video')?.codecs;
+  if (!codecs || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) return;
+
+  const isVp8 = (codec) => codec.mimeType.toLowerCase() === 'video/vp8';
+  const ordered = [...codecs.filter(isVp8), ...codecs.filter((codec) => !isVp8(codec))];
+
+  for (const transceiver of peerConnection.getTransceivers()) {
+    if (transceiver.sender.track?.kind !== 'video') continue;
+    try {
+      transceiver.setCodecPreferences(ordered);
+    } catch (err) {
+      console.warn('Could not set codec preference:', err);
+    }
+  }
+}
+
 /** Play incoming audio/video with the smallest possible buffer delay. */
 export function tuneReceiverForLowLatency(receiver) {
   if ('jitterBufferTarget' in receiver) {

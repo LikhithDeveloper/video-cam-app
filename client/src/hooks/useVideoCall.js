@@ -5,6 +5,7 @@ import {
   MEDIA_CONSTRAINTS,
   tuneSenderForLowLatency,
   tuneReceiverForLowLatency,
+  preferVp8Codec,
   getRoundTripTimeMs,
   describeMediaError,
 } from '../lib/webrtc.js';
@@ -72,16 +73,18 @@ export function useVideoCall({ name, mode, code }) {
       // Send our camera + mic to the other person.
       const stream = localStreamRef.current;
       stream.getTracks().forEach((track) => connection.addTrack(track, stream));
+      preferVp8Codec(connection);
 
       // Send each network path to the peer as soon as it's discovered (trickle ICE).
       connection.onicecandidate = ({ candidate }) => {
         if (candidate) sendSignal({ candidate });
       };
 
-      // Their video/audio arrived.
-      connection.ontrack = ({ receiver, streams }) => {
+      // Their audio/video arrived. Each track arrives separately, so build a new
+      // stream with every track so far (a new object makes <video> reload it).
+      connection.ontrack = ({ receiver, track }) => {
         tuneReceiverForLowLatency(receiver);
-        setRemoteStream(streams[0]);
+        setRemoteStream((current) => new MediaStream([...(current?.getTracks() ?? []), track]));
       };
 
       connection.onconnectionstatechange = () => {

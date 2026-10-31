@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MicOffIcon } from './Icons.jsx';
 
 /**
@@ -7,10 +7,33 @@ import { MicOffIcon } from './Icons.jsx';
  */
 export default function VideoTile({ stream, name, camOn = true, micOn = true, muted = false, mirrored = false, className = '' }) {
   const videoRef = useRef(null);
+  const [needsTapForSound, setNeedsTapForSound] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = stream ?? null;
-  }, [stream]);
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.srcObject = stream ?? null;
+    if (!stream) return;
+
+    // Phones often block auto-playing video that has sound, which leaves the
+    // video black. If that happens, play it muted and ask for one tap to unmute.
+    video.play().catch((err) => {
+      if (err.name !== 'NotAllowedError') return;
+      video.muted = true;
+      video.play().catch(() => {});
+      if (!muted) setNeedsTapForSound(true);
+    });
+  }, [stream, muted]);
+
+  function enableSound() {
+    const video = videoRef.current;
+    video.muted = false;
+    video
+      .play()
+      .then(() => setNeedsTapForSound(false))
+      .catch(() => {});
+  }
 
   const showVideo = stream && camOn;
 
@@ -28,6 +51,12 @@ export default function VideoTile({ stream, name, camOn = true, micOn = true, mu
         <div className="avatar">
           <span>{name?.[0]?.toUpperCase() ?? '?'}</span>
         </div>
+      )}
+
+      {needsTapForSound && (
+        <button className="tap-for-sound" onClick={enableSound}>
+          🔊 Tap to turn on sound
+        </button>
       )}
 
       {name && (

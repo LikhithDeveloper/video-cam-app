@@ -462,6 +462,19 @@ button:disabled {
   backdrop-filter: blur(6px);
 }
 
+.tap-for-sound {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
 .name-tag svg {
   width: 14px;
   height: 14px;
