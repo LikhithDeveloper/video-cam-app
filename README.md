@@ -28,7 +28,7 @@ npm run build    # builds the React app into client/dist
 npm start        # the Node server serves the app + signaling on port 3001
 ```
 
-When you deploy it publicly, put it behind HTTPS (e.g. Render, Railway, or Nginx + Let's Encrypt).
+When you deploy it (e.g. on Render), it gets HTTPS automatically. Both people still need to be on the same network.
 
 ## How it works
 
@@ -49,25 +49,12 @@ When you deploy it publicly, put it behind HTTPS (e.g. Render, Railway, or Nginx
 ## Why the latency is low
 
 - **Peer-to-peer:** video never goes through a server.
-- **Trickle ICE + candidate pool:** the connection is set up as fast as possible.
+- **Trickle ICE:** connection paths are sent as soon as they are found, so the call connects fast.
 - **Minimal jitter buffer** (`jitterBufferTarget = 0`): incoming frames are played right away.
 - **`maintain-framerate` + `contentHint: 'motion'`:** on a bad network, quality drops instead of the video lagging.
 - **Live RTT badge** in the call header (green under 80 ms).
 
-## TURN server (needed for calls across different networks)
+## Limitation: same network only
 
-If the call stays on **Connecting… / Reconnecting…**, the two networks block direct
-connections (very common on mobile data). A TURN server relays the video instead.
-
-1. Create a free account at [Metered.ca](https://dashboard.metered.ca) and create a TURN app.
-2. Copy your app's domain (e.g. `yourapp.metered.live`) and API key.
-3. Add them as environment variables: on **Render → your service → Environment**, or locally in
-   `server/.env` (see `server/.env.example`):
-   ```
-   METERED_DOMAIN=yourapp.metered.live
-   METERED_API_KEY=your-api-key
-   ```
-
-Any other TURN server (e.g. self-hosted [coturn](https://github.com/coturn/coturn)) works too, via
-`TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL`. The keys stay on the server; browsers fetch
-them from `/api/ice-servers`.
+The app uses no STUN/TURN servers, so both people must be on the **same Wi-Fi / local
+network**. Calls between different networks (e.g. one phone on mobile data) will not connect.

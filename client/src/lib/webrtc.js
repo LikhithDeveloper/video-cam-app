@@ -3,8 +3,8 @@
  *
  * Where the latency savings come from:
  *  1. Peer-to-peer: video goes straight between the two browsers, no server hop.
- *  2. Trickle ICE + candidate pool: connection paths are gathered early and sent
- *     as soon as they're found, so the call connects faster.
+ *  2. Trickle ICE: connection paths are sent as soon as they're found,
+ *     so the call connects faster.
  *  3. max-bundle / rtcp-mux: audio + video share one network connection.
  *  4. Minimal jitter buffer on the receiver: frames are played as soon as they
  *     arrive instead of being held back "just in case".
@@ -12,34 +12,14 @@
  *     instead of buffering or dropping frames, so motion stays real-time.
  */
 
-// ---- ICE servers ----------------------------------------------------------
-// STUN lets each browser discover its public address, so they can connect
-// directly. TURN is a relay used when a direct connection is impossible
-// (mobile data, strict routers). Our server provides both, so TURN passwords
-// stay in the server's environment variables instead of the browser code.
-const FALLBACK_ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
-
-/** Fetch the STUN/TURN servers from our server. Never throws. */
-export async function loadRtcConfig() {
-  let iceServers = FALLBACK_ICE_SERVERS;
-  try {
-    const response = await fetch('/api/ice-servers');
-    if (response.ok) iceServers = await response.json();
-  } catch (err) {
-    console.warn('Could not load ICE servers, using STUN only:', err);
-  }
-
-  if (!iceServers.some((server) => String(server.urls).includes('turn:'))) {
-    console.warn('No TURN server configured: calls between strict networks (e.g. mobile data) may not connect.');
-  }
-
-  return {
-    iceServers,
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require',
-    iceCandidatePoolSize: 4,
-  };
-}
+// ---- Peer connection settings -------------------------------------------
+// No STUN/TURN servers: the two browsers connect using their local network
+// addresses, so both people must be on the same Wi-Fi / network.
+export const RTC_CONFIG = {
+  iceServers: [],
+  bundlePolicy: 'max-bundle', // audio + video share one connection
+  rtcpMuxPolicy: 'require',
+};
 
 // ---- Camera & microphone --------------------------------------------------
 export const MEDIA_CONSTRAINTS = {

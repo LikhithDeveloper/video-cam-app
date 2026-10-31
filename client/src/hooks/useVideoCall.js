@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectSignaling } from '../lib/signaling.js';
 import {
-  loadRtcConfig,
+  RTC_CONFIG,
   MEDIA_CONSTRAINTS,
   tuneSenderForLowLatency,
   tuneReceiverForLowLatency,
@@ -14,7 +14,7 @@ import {
  * Runs one video call from start to finish.
  *
  * How a call is set up:
- *   1. Turn on camera + mic, and fetch the STUN/TURN servers from our server.
+ *   1. Turn on camera + mic.
  *   2. Connect to the signaling server and either `create` a room (get a code)
  *      or `join` one with a friend's code.
  *   3. When both people are in the room, the person who was waiting sends an
@@ -44,7 +44,6 @@ export function useVideoCall({ name, mode, code }) {
     let cancelled = false;
     let signaling = null;
     let pc = null; // the current RTCPeerConnection
-    let rtcConfig = null; // STUN/TURN servers, loaded from our server in start()
     let isCaller = false; // true for the person who sends the offer
     let pendingCandidates = []; // ICE candidates that arrived before the offer/answer
     let signalQueue = Promise.resolve(); // processes signals strictly one at a time
@@ -68,7 +67,7 @@ export function useVideoCall({ name, mode, code }) {
     function createPeerConnection() {
       closePeerConnection();
 
-      const connection = new RTCPeerConnection(rtcConfig);
+      const connection = new RTCPeerConnection(RTC_CONFIG);
       pc = connection;
 
       // Send our camera + mic to the other person.
@@ -213,12 +212,7 @@ export function useVideoCall({ name, mode, code }) {
     // ---------------------------------------------------------------------
     async function start() {
       try {
-        // Start the camera and load the STUN/TURN servers at the same time.
-        const [stream, config] = await Promise.all([
-          navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS),
-          loadRtcConfig(),
-        ]);
-        rtcConfig = config;
+        const stream = await navigator.mediaDevices.getUserMedia(MEDIA_CONSTRAINTS);
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;

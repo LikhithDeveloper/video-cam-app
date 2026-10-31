@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       // Forward the signaling WebSocket to the Node server.
       '/ws': { target: 'ws://localhost:3001', ws: true },
-      '/api': 'http://localhost:3001',
     },
   },
 }));
