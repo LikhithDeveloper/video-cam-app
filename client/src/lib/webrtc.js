@@ -13,24 +13,33 @@
  */
 
 // ---- ICE servers ----------------------------------------------------------
-// STUN lets each browser discover its public address (free, public servers).
-// TURN is a relay fallback for strict firewalls — configure it in client/.env.
-const iceServers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+// STUN lets each browser discover its public address, so they can connect
+// directly. TURN is a relay used when a direct connection is impossible
+// (mobile data, strict routers). Our server provides both, so TURN passwords
+// stay in the server's environment variables instead of the browser code.
+const FALLBACK_ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
 
-if (import.meta.env.VITE_TURN_URL) {
-  iceServers.push({
-    urls: import.meta.env.VITE_TURN_URL,
-    username: import.meta.env.VITE_TURN_USERNAME,
-    credential: import.meta.env.VITE_TURN_CREDENTIAL,
-  });
+/** Fetch the STUN/TURN servers from our server. Never throws. */
+export async function loadRtcConfig() {
+  let iceServers = FALLBACK_ICE_SERVERS;
+  try {
+    const response = await fetch('/api/ice-servers');
+    if (response.ok) iceServers = await response.json();
+  } catch (err) {
+    console.warn('Could not load ICE servers, using STUN only:', err);
+  }
+
+  if (!iceServers.some((server) => String(server.urls).includes('turn:'))) {
+    console.warn('No TURN server configured: calls between strict networks (e.g. mobile data) may not connect.');
+  }
+
+  return {
+    iceServers,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceCandidatePoolSize: 4,
+  };
 }
-
-export const RTC_CONFIG = {
-  iceServers,
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require',
-  iceCandidatePoolSize: 4,
-};
 
 // ---- Camera & microphone --------------------------------------------------
 export const MEDIA_CONSTRAINTS = {

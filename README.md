@@ -54,6 +54,20 @@ When you deploy it publicly, put it behind HTTPS (e.g. Render, Railway, or Nginx
 - **`maintain-framerate` + `contentHint: 'motion'`:** on a bad network, quality drops instead of the video lagging.
 - **Live RTT badge** in the call header (green under 80 ms).
 
-## TURN server (optional)
+## TURN server (needed for calls across different networks)
 
-Some strict networks (corporate firewalls, some mobile carriers) block direct connections. For those, copy `client/.env.example` to `client/.env` and fill in a TURN server (e.g. self-hosted [coturn](https://github.com/coturn/coturn), or Metered/Twilio).
+If the call stays on **Connecting… / Reconnecting…**, the two networks block direct
+connections (very common on mobile data). A TURN server relays the video instead.
+
+1. Create a free account at [Metered.ca](https://dashboard.metered.ca) and create a TURN app.
+2. Copy your app's domain (e.g. `yourapp.metered.live`) and API key.
+3. Add them as environment variables: on **Render → your service → Environment**, or locally in
+   `server/.env` (see `server/.env.example`):
+   ```
+   METERED_DOMAIN=yourapp.metered.live
+   METERED_API_KEY=your-api-key
+   ```
+
+Any other TURN server (e.g. self-hosted [coturn](https://github.com/coturn/coturn)) works too, via
+`TURN_URLS`, `TURN_USERNAME` and `TURN_CREDENTIAL`. The keys stay on the server; browsers fetch
+them from `/api/ice-servers`.

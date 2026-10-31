@@ -34,6 +34,48 @@ const CODE_LENGTH = 6;
 // HTTP server: serves the built React app in production (after `npm run build`)
 // ---------------------------------------------------------------------------
 const app = express();
+
+// ---------------------------------------------------------------------------
+// ICE servers: how the two browsers find a network path to each other.
+//   STUN = discover your public address so you can connect directly (free).
+//   TURN = relay the video when a direct connection is impossible, e.g. on
+//          mobile data or strict routers. Configured with environment variables.
+// ---------------------------------------------------------------------------
+const STUN_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+
+async function getTurnServers() {
+  // Option 1: Metered.ca (has a free plan) — fetches fresh credentials with your API key.
+  if (process.env.METERED_DOMAIN && process.env.METERED_API_KEY) {
+    const url = `https://${process.env.METERED_DOMAIN}/api/v1/turn/credentials?apiKey=${process.env.METERED_API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Metered responded with ${response.status}`);
+    return response.json();
+  }
+
+  // Option 2: any TURN server with a fixed username/password (e.g. your own coturn).
+  if (process.env.TURN_URLS) {
+    return [
+      {
+        urls: process.env.TURN_URLS.split(',').map((url) => url.trim()),
+        username: process.env.TURN_USERNAME,
+        credential: process.env.TURN_CREDENTIAL,
+      },
+    ];
+  }
+
+  return [];
+}
+
+app.get('/api/ice-servers', async (req, res) => {
+  let turnServers = [];
+  try {
+    turnServers = await getTurnServers();
+  } catch (err) {
+    console.error('Could not load TURN servers:', err.message);
+  }
+  res.json([...STUN_SERVERS, ...turnServers]);
+});
+
 const clientBuildDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../client/dist');
 app.use(express.static(clientBuildDir));
 
