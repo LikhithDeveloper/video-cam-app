@@ -10,8 +10,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: true, // also listen on your LAN IP, not only localhost
     proxy: {
-      // Forward the signaling WebSocket to the Node server.
-      '/ws': { target: 'ws://localhost:3001', ws: true },
+      // Forward Socket.IO (signaling) traffic to the Node server.
+      '/socket.io': { target: 'http://localhost:3001', ws: true },
     },
   },
 }));

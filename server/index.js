@@ -1,27 +1,30 @@
 /**
- * Signaling server
- * ----------------
+ * Signaling server (Socket.IO)
+ * ----------------------------
  * WebRTC sends audio/video DIRECTLY between the two browsers (peer-to-peer).
  * But before they can connect, the browsers need to exchange a few small
  * messages ("offer", "answer" and "ICE candidates"). This server only relays
  * those messages — no video ever passes through it.
  *
- * Message protocol (all JSON over a WebSocket at /ws):
+ * Socket.IO events:
  *
  *   client -> server                     server -> client
- *   { type: 'create', name }             { type: 'created', code }
- *   { type: 'join', name, code }         { type: 'joined', code, peerName }  (to the joiner)
- *                                        { type: 'peer-joined', peerName }   (to the person waiting)
- *   { type: 'signal', data }             { type: 'signal', data }            (relayed to the other person)
- *   { type: 'leave' }                    { type: 'peer-left' }
- *                                        { type: 'error', message }
+ *   'create', { name }                   'created',     { code }
+ *   'join',   { name, code }             'joined',      { code, peerName }  (to the joiner)
+ *                                        'peer-joined', { peerName }        (to the person waiting)
+ *   'signal', data                       'signal',      data                (relayed to the other person)
+ *   'leave'                              'peer-left'
+ *                                        'call-error',  { message }
+ *
+ * Each call is a Socket.IO room named by its 6-character code, so relaying
+ * to "the other person" is just `socket.to(code).emit(...)`.
  */
 import express from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { WebSocketServer } from 'ws';
+import { Server } from 'socket.io';
 
 const PORT = process.env.PORT || 3001;
 const MAX_PEOPLE_PER_ROOM = 2;
@@ -40,41 +43,37 @@ app.use(express.static(clientBuildDir));
 
 const server = http.createServer(app);
 
+// Same origin in production, and Vite proxies /socket.io in development,
+// so no CORS settings are needed. Socket.IO's own heartbeat detects
+// connections that silently died (e.g. laptop closed).
+const io = new Server(server);
+
 // ---------------------------------------------------------------------------
-// Rooms: code -> Set of connected sockets (max 2)
+// Rooms
 // ---------------------------------------------------------------------------
-const rooms = new Map();
+
+/** Socket ids currently in a call room (empty set if the room doesn't exist). */
+function roomMembers(code) {
+  return io.sockets.adapter.rooms.get(code) ?? new Set();
+}
 
 function generateRoomCode() {
   let code;
   do {
     code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
-  } while (rooms.has(code));
+  } while (roomMembers(code).size > 0);
   return code;
 }
 
-function send(socket, message) {
-  if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
-}
-
-/** The other person in the same room (or undefined if alone). */
-function getPeer(socket) {
-  const room = rooms.get(socket.roomCode);
-  if (!room) return undefined;
-  return [...room].find((member) => member !== socket);
-}
-
 function leaveRoom(socket) {
-  const room = rooms.get(socket.roomCode);
-  if (!room) return;
+  const code = socket.data.roomCode;
+  if (!code) return;
 
-  room.delete(socket);
-  const peer = [...room][0];
-  if (peer) send(peer, { type: 'peer-left' });
-  if (room.size === 0) rooms.delete(socket.roomCode);
+  socket.leave(code);
+  socket.to(code).emit('peer-left');
+  socket.data.roomCode = null;
 
-  console.log(`[room ${socket.roomCode}] ${socket.userName} left (${room.size} remaining)`);
-  socket.roomCode = null;
+  console.log(`[room ${code}] ${socket.data.userName} left (${roomMembers(code).size} remaining)`);
 }
 
 function cleanName(name) {
@@ -82,86 +81,55 @@ function cleanName(name) {
 }
 
 // ---------------------------------------------------------------------------
-// Message handlers
+// Connections
 // ---------------------------------------------------------------------------
-const handlers = {
-  create(socket, { name }) {
+io.on('connection', (socket) => {
+  socket.data.roomCode = null;
+  socket.data.userName = 'Guest';
+
+  socket.on('create', ({ name } = {}) => {
     leaveRoom(socket);
-    socket.userName = cleanName(name);
-    socket.roomCode = generateRoomCode();
-    rooms.set(socket.roomCode, new Set([socket]));
+    socket.data.userName = cleanName(name);
+    socket.data.roomCode = generateRoomCode();
+    socket.join(socket.data.roomCode);
 
-    send(socket, { type: 'created', code: socket.roomCode });
-    console.log(`[room ${socket.roomCode}] created by ${socket.userName}`);
-  },
-
-  join(socket, { name, code }) {
-    const roomCode = String(code ?? '').trim().toUpperCase();
-    const room = rooms.get(roomCode);
-
-    if (!room) return send(socket, { type: 'error', message: 'No call found with that code. Check the code and try again.' });
-    if (room.size >= MAX_PEOPLE_PER_ROOM) return send(socket, { type: 'error', message: 'This call is already full.' });
-
-    leaveRoom(socket);
-    socket.userName = cleanName(name);
-    socket.roomCode = roomCode;
-    const waitingPerson = [...room][0];
-    room.add(socket);
-
-    // Tell the joiner who is there, and tell the waiting person to start the call.
-    send(socket, { type: 'joined', code: roomCode, peerName: waitingPerson?.userName });
-    if (waitingPerson) send(waitingPerson, { type: 'peer-joined', peerName: socket.userName });
-    console.log(`[room ${roomCode}] ${socket.userName} joined`);
-  },
-
-  signal(socket, { data }) {
-    const peer = getPeer(socket);
-    if (peer) send(peer, { type: 'signal', data });
-  },
-
-  leave(socket) {
-    leaveRoom(socket);
-  },
-};
-
-// ---------------------------------------------------------------------------
-// WebSocket server
-// ---------------------------------------------------------------------------
-const wss = new WebSocketServer({ server, path: '/ws' });
-
-wss.on('connection', (socket) => {
-  socket.roomCode = null;
-  socket.userName = 'Guest';
-  socket.isAlive = true;
-
-  socket.on('pong', () => (socket.isAlive = true));
-
-  socket.on('message', (raw) => {
-    let message;
-    try {
-      message = JSON.parse(raw);
-    } catch {
-      return; // ignore anything that isn't valid JSON
-    }
-    handlers[message.type]?.(socket, message);
+    socket.emit('created', { code: socket.data.roomCode });
+    console.log(`[room ${socket.data.roomCode}] created by ${socket.data.userName}`);
   });
 
-  socket.on('close', () => leaveRoom(socket));
-});
+  socket.on('join', ({ name, code } = {}) => {
+    const roomCode = String(code ?? '').trim().toUpperCase();
+    const members = roomMembers(roomCode);
 
-// Every 30s, drop connections that stopped responding (e.g. laptop closed),
-// so the other person is told they left instead of waiting forever.
-const heartbeat = setInterval(() => {
-  for (const socket of wss.clients) {
-    if (!socket.isAlive) {
-      socket.terminate();
-      continue;
+    if (members.size === 0) {
+      return socket.emit('call-error', { message: 'No call found with that code. Check the code and try again.' });
     }
-    socket.isAlive = false;
-    socket.ping();
-  }
-}, 30_000);
-wss.on('close', () => clearInterval(heartbeat));
+    if (members.size >= MAX_PEOPLE_PER_ROOM) {
+      return socket.emit('call-error', { message: 'This call is already full.' });
+    }
+
+    leaveRoom(socket);
+    socket.data.userName = cleanName(name);
+    socket.data.roomCode = roomCode;
+    const waitingPerson = io.sockets.sockets.get([...members][0]);
+    socket.join(roomCode);
+
+    // Tell the joiner who is there, and tell the waiting person to start the call.
+    socket.emit('joined', { code: roomCode, peerName: waitingPerson?.data.userName });
+    socket.to(roomCode).emit('peer-joined', { peerName: socket.data.userName });
+    console.log(`[room ${roomCode}] ${socket.data.userName} joined`);
+  });
+
+  socket.on('signal', (data) => {
+    // Guard: socket.to(null) would broadcast to everyone on the server.
+    if (socket.data.roomCode) socket.to(socket.data.roomCode).emit('signal', data);
+  });
+
+  socket.on('leave', () => leaveRoom(socket));
+
+  // Fires just before the socket leaves its rooms, so the peer still gets told.
+  socket.on('disconnecting', () => leaveRoom(socket));
+});
 
 server.listen(PORT, () => {
   console.log(`Signaling server running on http://localhost:${PORT}`);

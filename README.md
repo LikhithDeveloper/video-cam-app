@@ -1,6 +1,6 @@
 # BubbleCall 🫧
 
-One-to-one video calls with React + WebRTC. Enter your name, create a call, send the 6-character code to a friend, and they join with it.
+One-to-one video calls with React + WebRTC, with Socket.IO for signaling. Enter your name, create a call, send the 6-character code to a friend, and they join with it.
 
 ## Run it
 
@@ -33,17 +33,17 @@ When you deploy it (e.g. on Render), it gets HTTPS automatically and people can 
 ## How it works
 
 ```
- Browser A ──(WebSocket: offer/answer/ICE)──► Signaling server ◄──(WebSocket)── Browser B
+ Browser A ──(Socket.IO: offer/answer/ICE)──► Signaling server ◄──(Socket.IO)── Browser B
      ▲                                                                            ▲
      └──────────────── audio + video, directly peer-to-peer (WebRTC) ─────────────┘
 ```
 
 | File | What it does |
 | --- | --- |
-| `server/index.js` | Creates rooms and codes, and relays signaling messages between the two people |
+| `server/index.js` | Socket.IO server: creates rooms and codes, and relays signaling events between the two people |
 | `client/src/hooks/useVideoCall.js` | All the call logic: camera, peer connection, offer/answer, reconnecting |
 | `client/src/lib/webrtc.js` | Low-latency WebRTC settings and helpers |
-| `client/src/lib/signaling.js` | Small WebSocket wrapper |
+| `client/src/lib/signaling.js` | Small Socket.IO client wrapper |
 | `client/src/components/` | UI: `Home`, `CallRoom`, `VideoTile`, `Bubbles`, `Icons` |
 
 ## Why the latency is low

@@ -15,8 +15,8 @@ import {
  *
  * How a call is set up:
  *   1. Turn on camera + mic.
- *   2. Connect to the signaling server and either `create` a room (get a code)
- *      or `join` one with a friend's code.
+ *   2. Connect to the signaling server (Socket.IO) and either `create` a room
+ *      (get a code) or `join` one with a friend's code.
  *   3. When both people are in the room, the person who was waiting sends an
  *      "offer"; the joiner replies with an "answer". Both sides also trade
  *      "ICE candidates" (possible network paths).
@@ -55,7 +55,7 @@ export function useVideoCall({ name, mode, code }) {
       'Could not connect to your friend. One of your networks blocks direct connections — ' +
       'try a different Wi-Fi or mobile data, then start the call again.';
 
-    const sendSignal = (data) => signaling?.send({ type: 'signal', data });
+    const sendSignal = (data) => signaling?.emit('signal', data);
 
     /** Run async WebRTC steps in order, so they never overlap. */
     const enqueue = (task) => {
@@ -188,48 +188,44 @@ export function useVideoCall({ name, mode, code }) {
     }
 
     // ---------------------------------------------------------------------
-    // Messages from the signaling server
+    // Events from the signaling server
     // ---------------------------------------------------------------------
-    function handleServerMessage(message) {
-      switch (message.type) {
-        case 'created':
-          setRoomCode(message.code);
-          setStatus('waiting');
-          break;
+    function listenToServer() {
+      signaling.on('created', ({ code: newCode }) => {
+        setRoomCode(newCode);
+        setStatus('waiting');
+      });
 
-        case 'joined':
-          // We joined someone's room: get ready to receive their offer.
-          setRoomCode(message.code);
-          setPeer({ name: message.peerName, micOn: true, camOn: true });
-          setStatus('connecting');
-          isCaller = false;
-          enqueue(() => createPeerConnection());
-          sendSignal({ mediaState: currentMediaState() });
-          break;
+      // We joined someone's room: get ready to receive their offer.
+      signaling.on('joined', ({ code: joinedCode, peerName }) => {
+        setRoomCode(joinedCode);
+        setPeer({ name: peerName, micOn: true, camOn: true });
+        setStatus('connecting');
+        isCaller = false;
+        enqueue(() => createPeerConnection());
+        sendSignal({ mediaState: currentMediaState() });
+      });
 
-        case 'peer-joined':
-          // A friend joined our room: we start the call.
-          setPeer({ name: message.peerName, micOn: true, camOn: true });
-          setStatus('connecting');
-          enqueue(startCall);
-          sendSignal({ mediaState: currentMediaState() });
-          break;
+      // A friend joined our room: we start the call.
+      signaling.on('peer-joined', ({ peerName }) => {
+        setPeer({ name: peerName, micOn: true, camOn: true });
+        setStatus('connecting');
+        enqueue(startCall);
+        sendSignal({ mediaState: currentMediaState() });
+      });
 
-        case 'signal':
-          enqueue(() => handleSignal(message.data));
-          break;
+      signaling.on('signal', (data) => enqueue(() => handleSignal(data)));
 
-        case 'peer-left':
-          closePeerConnection();
-          setPeer(null);
-          setStatus('waiting'); // stay in the room, so the friend can rejoin with the same code
-          break;
+      signaling.on('peer-left', () => {
+        closePeerConnection();
+        setPeer(null);
+        setStatus('waiting'); // stay in the room, so the friend can rejoin with the same code
+      });
 
-        case 'error':
-          setError(message.message);
-          setStatus('error');
-          break;
-      }
+      signaling.on('call-error', ({ message }) => {
+        setError(message);
+        setStatus('error');
+      });
     }
 
     // ---------------------------------------------------------------------
@@ -255,16 +251,16 @@ export function useVideoCall({ name, mode, code }) {
       }
 
       signaling = connectSignaling({
-        onMessage: handleServerMessage,
         onDisconnect: () => {
           setError('Lost connection to the server. Please start the call again.');
           setStatus('error');
         },
       });
       signalingRef.current = signaling;
+      listenToServer();
 
-      if (mode === 'create') signaling.send({ type: 'create', name });
-      else signaling.send({ type: 'join', name, code });
+      if (mode === 'create') signaling.emit('create', { name });
+      else signaling.emit('join', { name, code });
     }
 
     start();
@@ -291,7 +287,7 @@ export function useVideoCall({ name, mode, code }) {
     setEnabled(track.enabled);
 
     const key = kind === 'audio' ? 'micOn' : 'camOn';
-    signalingRef.current?.send({ type: 'signal', data: { mediaState: { [key]: track.enabled } } });
+    signalingRef.current?.emit('signal', { mediaState: { [key]: track.enabled } });
   }, []);
 
   const toggleMic = useCallback(() => toggleTrack('audio', setMicOn), [toggleTrack]);

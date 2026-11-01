@@ -1,35 +1,37 @@
 /**
- * Tiny wrapper around a WebSocket connection to our signaling server.
- * Messages sent before the socket is open are queued and sent on connect.
+ * Tiny wrapper around the Socket.IO connection to our signaling server.
+ *
+ * Socket.IO connects to the page's own origin (Vite proxies /socket.io to the
+ * Node server in development), queues anything emitted before the connection
+ * is open, and keeps the connection alive with its own heartbeat.
  */
-export function connectSignaling({ onMessage, onDisconnect }) {
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
-  const outbox = [];
+import { io } from 'socket.io-client';
+
+export function connectSignaling({ onDisconnect }) {
+  // No auto-reconnect: the server tells the other person we left as soon as
+  // the connection drops, so a reconnected socket would no longer be in the call.
+  const socket = io({ reconnection: false });
   let closedByUs = false;
 
-  socket.onopen = () => {
-    outbox.splice(0).forEach((message) => socket.send(message));
-  };
-
-  socket.onmessage = (event) => {
-    onMessage(JSON.parse(event.data));
-  };
-
-  socket.onclose = () => {
+  const handleLost = () => {
     if (!closedByUs) onDisconnect?.();
   };
+  socket.on('disconnect', handleLost);
+  socket.on('connect_error', handleLost);
 
   return {
-    send(message) {
-      const text = JSON.stringify(message);
-      if (socket.readyState === WebSocket.OPEN) socket.send(text);
-      else outbox.push(text);
+    /** Listen for an event from the server. */
+    on(event, handler) {
+      socket.on(event, handler);
+    },
+    /** Send an event to the server. */
+    emit(event, payload) {
+      socket.emit(event, payload);
     },
     close() {
       closedByUs = true;
-      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'leave' }));
-      socket.close();
+      if (socket.connected) socket.emit('leave');
+      socket.disconnect();
     },
   };
 }
