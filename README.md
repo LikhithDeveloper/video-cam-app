@@ -28,7 +28,7 @@ npm run build    # builds the React app into client/dist
 npm start        # the Node server serves the app + signaling on port 3001
 ```
 
-When you deploy it (e.g. on Render), it gets HTTPS automatically. Both people still need to be on the same network.
+When you deploy it (e.g. on Render), it gets HTTPS automatically and people can call each other from anywhere.
 
 ## How it works
 
@@ -54,7 +54,17 @@ When you deploy it (e.g. on Render), it gets HTTPS automatically. Both people st
 - **`maintain-framerate` + `contentHint: 'motion'`:** on a bad network, quality drops instead of the video lagging.
 - **Live RTT badge** in the call header (green under 80 ms).
 
-## Limitation: same network only
+## Calling between different networks
 
-The app uses no STUN/TURN servers, so both people must be on the **same Wi-Fi / local
-network**. Calls between different networks (e.g. one phone on mobile data) will not connect.
+The peer connection uses free public **STUN** servers (Google, Cloudflare) so each browser
+can learn its public address. That is enough for most home Wi-Fi and mobile connections.
+
+A few strict networks (some mobile carriers, offices, hotspots with client isolation) block
+every direct path. There the call shows *"Could not connect to your friend"*. Those networks
+need a **TURN** relay: add one to `RTC_CONFIG` in `client/src/lib/webrtc.js`:
+
+```js
+{ urls: 'turn:turn.example.com:3478', username: '...', credential: '...' }
+```
+
+Free TURN tiers exist at e.g. Metered.ca, Twilio and Cloudflare Calls.

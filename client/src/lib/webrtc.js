@@ -13,10 +13,21 @@
  */
 
 // ---- Peer connection settings -------------------------------------------
-// No STUN/TURN servers: the two browsers connect using their local network
-// addresses, so both people must be on the same Wi-Fi / network.
+// STUN servers let each browser discover its own public IP address. Without
+// them a browser only knows its private Wi-Fi address (192.168.x.x), which the
+// other person's browser cannot reach from a different network, so the call
+// stays stuck on "Connecting…". STUN is part of WebRTC itself: no account, no
+// server to run, and no media ever passes through it.
+//
+// A small number of strict networks (some mobile carriers, offices, hotspots
+// with client isolation) block every direct path. Those need a TURN relay.
+// To add one, append an entry here:
+//   { urls: 'turn:turn.example.com:3478', username: '...', credential: '...' }
 export const RTC_CONFIG = {
-  iceServers: [],
+  iceServers: [
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+  ],
   bundlePolicy: 'max-bundle', // audio + video share one connection
   rtcpMuxPolicy: 'require',
 };

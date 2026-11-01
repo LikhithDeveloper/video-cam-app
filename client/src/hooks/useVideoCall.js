@@ -48,6 +48,12 @@ export function useVideoCall({ name, mode, code }) {
     let pendingCandidates = []; // ICE candidates that arrived before the offer/answer
     let signalQueue = Promise.resolve(); // processes signals strictly one at a time
     let statsTimer = null;
+    let failTimer = null; // gives a failed connection a moment to recover before giving up
+    let iceRestarted = false; // the caller retries once with new network paths
+
+    const CONNECT_FAILED_MESSAGE =
+      'Could not connect to your friend. One of your networks blocks direct connections — ' +
+      'try a different Wi-Fi or mobile data, then start the call again.';
 
     const sendSignal = (data) => signaling?.send({ type: 'signal', data });
 
@@ -87,9 +93,15 @@ export function useVideoCall({ name, mode, code }) {
         setRemoteStream((current) => new MediaStream([...(current?.getTracks() ?? []), track]));
       };
 
+      connection.oniceconnectionstatechange = () => {
+        console.log('[call] ICE state:', connection.iceConnectionState);
+      };
+
       connection.onconnectionstatechange = () => {
+        console.log('[call] connection state:', connection.connectionState);
         switch (connection.connectionState) {
           case 'connected':
+            clearTimeout(failTimer);
             setStatus('connected');
             connection.getSenders().forEach(tuneSenderForLowLatency);
             startLatencyMonitor(connection);
@@ -99,7 +111,18 @@ export function useVideoCall({ name, mode, code }) {
             break;
           case 'failed':
             setStatus('reconnecting');
-            if (isCaller) enqueue(() => restartIce(connection));
+            if (isCaller && !iceRestarted) {
+              iceRestarted = true;
+              enqueue(() => restartIce(connection));
+            }
+            // If the retry doesn't connect within 15s, stop and tell the user why.
+            clearTimeout(failTimer);
+            failTimer = setTimeout(() => {
+              if (connection === pc && connection.connectionState !== 'connected') {
+                setError(CONNECT_FAILED_MESSAGE);
+                setStatus('error');
+              }
+            }, 15_000);
             break;
         }
       };
@@ -107,6 +130,8 @@ export function useVideoCall({ name, mode, code }) {
 
     function closePeerConnection() {
       clearInterval(statsTimer);
+      clearTimeout(failTimer);
+      iceRestarted = false;
       pc?.close();
       pc = null;
       pendingCandidates = [];
@@ -126,7 +151,7 @@ export function useVideoCall({ name, mode, code }) {
     async function startCall() {
       isCaller = true;
       createPeerConnection();
-      await pc.setLocalDescription(); // creates the offer automatically
+      await pc.setLocalDescription(await pc.createOffer());
       sendSignal({ description: pc.localDescription });
     }
 
@@ -149,7 +174,7 @@ export function useVideoCall({ name, mode, code }) {
         await pc.setRemoteDescription(data.description);
 
         if (data.description.type === 'offer') {
-          await pc.setLocalDescription(); // creates the answer automatically
+          await pc.setLocalDescription(await pc.createAnswer());
           sendSignal({ description: pc.localDescription });
         }
 
