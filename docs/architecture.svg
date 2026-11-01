@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" width="1400" height="1000" font-family="Segoe UI, Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1023"/>
+      <stop offset="1" stop-color="#1a1042"/>
+    </linearGradient>
+    <linearGradient id="media" gradientUnits="userSpaceOnUse" x1="386" y1="0" x2="1014" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <marker id="arrow-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#a78bfa"/>
+    </marker>
+    <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .title { fill: #f1f5f9; font-size: 30px; font-weight: 800; }
+      .subtitle { fill: #a5b4cf; font-size: 15px; }
+      .head { fill: #f1f5f9; font-size: 18px; font-weight: 700; }
+      .small-head { fill: #a5b4cf; font-size: 12px; font-weight: 600; letter-spacing: 1px; }
+      .item { fill: #f1f5f9; font-size: 14px; font-weight: 600; }
+      .desc { fill: #a5b4cf; font-size: 12px; }
+      .label { font-size: 13px; font-weight: 600; }
+      .sub { fill: rgba(255,255,255,0.06); stroke: rgba(255,255,255,0.16); }
+      code { font-family: Consolas, monospace; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1000" fill="url(#bg)"/>
+
+  <!-- decorative bubbles -->
+  <g opacity="0.18">
+    <circle cx="1330" cy="60" r="40" fill="#8b5cf6"/>
+    <circle cx="80" cy="70" r="26" fill="#06b6d4"/>
+  </g>
+
+  <!-- Title -->
+  <text x="700" y="50" text-anchor="middle" class="title">BubbleCall — Architecture</text>
+  <text x="700" y="76" text-anchor="middle" class="subtitle">React + WebRTC peer-to-peer video calling · Node.js signaling server on Render</text>
+
+  <!-- ================= Server ================= -->
+  <rect x="450" y="100" width="500" height="232" rx="18" fill="rgba(139,92,246,0.10)" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="700" y="130" text-anchor="middle" class="head">Node.js Server  ·  server/index.js</text>
+  <text x="935" y="128" text-anchor="end" class="small-head">RENDER</text>
+
+  <rect x="470" y="146" width="460" height="52" rx="10" class="sub"/>
+  <text x="488" y="168" class="item">Express static</text>
+  <text x="488" y="187" class="desc">Serves the built React app (client/dist) over HTTPS</text>
+
+  <rect x="470" y="206" width="460" height="52" rx="10" class="sub"/>
+  <text x="488" y="228" class="item">GET /api/ice-servers</text>
+  <text x="488" y="247" class="desc">Returns STUN + TURN config (TURN keys kept in env vars)</text>
+
+  <rect x="470" y="266" width="460" height="56" rx="10" class="sub"/>
+  <text x="488" y="288" class="item">WebSocket /ws — Signaling</text>
+  <text x="488" y="307" class="desc">Rooms &amp; 6-char codes · relays offer / answer / ICE candidates</text>
+
+  <!-- ================= Browser A ================= -->
+  <rect x="40" y="380" width="360" height="430" rx="18" fill="rgba(6,182,212,0.08)" stroke="#06b6d4" stroke-width="2"/>
+  <text x="220" y="412" text-anchor="middle" class="head">Browser A  (creates call)</text>
+
+  <rect x="60" y="430" width="320" height="56" rx="10" class="sub"/>
+  <text x="76" y="453" class="item">React UI</text>
+  <text x="76" y="473" class="desc">Home · CallRoom · VideoTile · Bubbles</text>
+
+  <rect x="60" y="496" width="320" height="56" rx="10" class="sub"/>
+  <text x="76" y="519" class="item">useVideoCall hook</text>
+  <text x="76" y="539" class="desc">Call state, offer/answer, reconnect, latency</text>
+
+  <rect x="60" y="562" width="320" height="56" rx="10" class="sub"/>
+  <text x="76" y="585" class="item">signaling.js</text>
+  <text x="76" y="605" class="desc">WebSocket client to /ws</text>
+
+  <rect x="60" y="628" width="320" height="76" rx="10" fill="rgba(34,211,238,0.12)" stroke="#22d3ee"/>
+  <text x="76" y="651" class="item">RTCPeerConnection</text>
+  <text x="76" y="671" class="desc">webrtc.js · VP8 · low jitter buffer</text>
+  <text x="76" y="689" class="desc">maintain-framerate · RTT stats</text>
+
+  <rect x="60" y="714" width="320" height="76" rx="10" class="sub"/>
+  <text x="76" y="737" class="item">Camera &amp; Microphone</text>
+  <text x="76" y="757" class="desc">getUserMedia · 720p @ 30fps</text>
+  <text x="76" y="775" class="desc">echo cancel · noise suppression</text>
+
+  <!-- ================= Browser B ================= -->
+  <rect x="1000" y="380" width="360" height="430" rx="18" fill="rgba(6,182,212,0.08)" stroke="#06b6d4" stroke-width="2"/>
+  <text x="1180" y="412" text-anchor="middle" class="head">Browser B  (joins with code)</text>
+
+  <rect x="1020" y="430" width="320" height="56" rx="10" class="sub"/>
+  <text x="1036" y="453" class="item">React UI</text>
+  <text x="1036" y="473" class="desc">Home · CallRoom · VideoTile · Bubbles</text>
+
+  <rect x="1020" y="496" width="320" height="56" rx="10" class="sub"/>
+  <text x="1036" y="519" class="item">useVideoCall hook</text>
+  <text x="1036" y="539" class="desc">Call state, offer/answer, reconnect, latency</text>
+
+  <rect x="1020" y="562" width="320" height="56" rx="10" class="sub"/>
+  <text x="1036" y="585" class="item">signaling.js</text>
+  <text x="1036" y="605" class="desc">WebSocket client to /ws</text>
+
+  <rect x="1020" y="628" width="320" height="76" rx="10" fill="rgba(34,211,238,0.12)" stroke="#22d3ee"/>
+  <text x="1036" y="651" class="item">RTCPeerConnection</text>
+  <text x="1036" y="671" class="desc">webrtc.js · VP8 · low jitter buffer</text>
+  <text x="1036" y="689" class="desc">maintain-framerate · RTT stats</text>
+
+  <rect x="1020" y="714" width="320" height="76" rx="10" class="sub"/>
+  <text x="1036" y="737" class="item">Camera &amp; Microphone</text>
+  <text x="1036" y="757" class="desc">getUserMedia · 720p @ 30fps</text>
+  <text x="1036" y="775" class="desc">echo cancel · noise suppression</text>
+
+  <!-- ================= STUN & TURN ================= -->
+  <rect x="500" y="388" width="400" height="74" rx="14" fill="rgba(148,163,184,0.10)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="700" y="417" text-anchor="middle" class="item">STUN servers  (Google, free)</text>
+  <text x="700" y="440" text-anchor="middle" class="desc">"What is my public IP?" — lets browsers connect directly</text>
+
+  <rect x="500" y="512" width="400" height="84" rx="14" fill="rgba(245,158,11,0.10)" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="700" y="542" text-anchor="middle" class="item">TURN relay  (Metered.ca / coturn)</text>
+  <text x="700" y="564" text-anchor="middle" class="desc">Fallback only: relays media when a direct path is blocked</text>
+  <text x="700" y="582" text-anchor="middle" class="desc">(mobile data, strict NAT / firewalls)</text>
+
+  <!-- ================= Connections ================= -->
+  <!-- Signaling WebSocket -->
+  <path d="M 200 380 V 294 H 450" fill="none" stroke="#a78bfa" stroke-width="2.5" marker-start="url(#arrow-violet)" marker-end="url(#arrow-violet)"/>
+  <path d="M 1200 380 V 294 H 950" fill="none" stroke="#a78bfa" stroke-width="2.5" marker-start="url(#arrow-violet)" marker-end="url(#arrow-violet)"/>
+  <text x="212" y="285" class="label" fill="#c4b5fd">WebSocket (signaling)</text>
+  <text x="1188" y="285" text-anchor="end" class="label" fill="#c4b5fd">WebSocket (signaling)</text>
+
+  <!-- HTTPS page load + ICE config -->
+  <path d="M 130 380 V 172 H 450" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="2 5" stroke-linecap="round" marker-end="url(#arrow-violet)"/>
+  <path d="M 1270 380 V 172 H 950" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="2 5" stroke-linecap="round" marker-end="url(#arrow-violet)"/>
+  <text x="142" y="163" class="label" fill="#c4b5fd">HTTPS: load app + /api/ice-servers</text>
+  <text x="1258" y="163" text-anchor="end" class="label" fill="#c4b5fd">HTTPS: load app + /api/ice-servers</text>
+
+  <!-- STUN -->
+  <line x1="380" y1="634" x2="500" y2="448" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4" marker-end="url(#arrow-gray)"/>
+  <line x1="1020" y1="634" x2="900" y2="448" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4" marker-end="url(#arrow-gray)"/>
+
+  <!-- TURN fallback -->
+  <line x1="380" y1="646" x2="500" y2="580" stroke="#f59e0b" stroke-width="2" stroke-dasharray="8 6" marker-start="url(#arrow-orange)" marker-end="url(#arrow-orange)"/>
+  <line x1="1020" y1="646" x2="900" y2="580" stroke="#f59e0b" stroke-width="2" stroke-dasharray="8 6" marker-start="url(#arrow-orange)" marker-end="url(#arrow-orange)"/>
+
+  <!-- Direct peer-to-peer media -->
+  <line x1="386" y1="684" x2="1014" y2="684" stroke="url(#media)" stroke-width="6" stroke-linecap="round" marker-start="url(#arrow-cyan)" marker-end="url(#arrow-cyan)"/>
+  <text x="700" y="668" text-anchor="middle" class="label" fill="#67e8f9" font-size="15">Audio + Video — direct peer-to-peer</text>
+  <text x="700" y="710" text-anchor="middle" class="desc">UDP · SRTP encrypted · VP8 + Opus · never touches the server</text>
+
+  <!-- ================= Call flow ================= -->
+  <text x="700" y="858" text-anchor="middle" class="small-head">HOW A CALL CONNECTS</text>
+  <g font-size="13">
+    <rect x="40" y="874" width="318" height="52" rx="26" class="sub"/>
+    <circle cx="70" cy="900" r="15" fill="#8b5cf6"/><text x="70" y="905" text-anchor="middle" class="item">1</text>
+    <text x="96" y="905" class="item" font-size="13">A creates call → gets code</text>
+
+    <rect x="370" y="874" width="318" height="52" rx="26" class="sub"/>
+    <circle cx="400" cy="900" r="15" fill="#8b5cf6"/><text x="400" y="905" text-anchor="middle" class="item">2</text>
+    <text x="426" y="905" class="item" font-size="13">B joins with the code</text>
+
+    <rect x="700" y="874" width="318" height="52" rx="26" class="sub"/>
+    <circle cx="730" cy="900" r="15" fill="#8b5cf6"/><text x="730" y="905" text-anchor="middle" class="item">3</text>
+    <text x="756" y="905" class="item" font-size="13">Offer / answer / ICE via /ws</text>
+
+    <rect x="1030" y="874" width="330" height="52" rx="26" class="sub"/>
+    <circle cx="1060" cy="900" r="15" fill="#06b6d4"/><text x="1060" y="905" text-anchor="middle" class="item">4</text>
+    <text x="1086" y="905" class="item" font-size="13">Video flows directly A ⇄ B</text>
+  </g>
+
+  <!-- ================= Legend ================= -->
+  <g class="desc" font-size="12">
+    <line x1="250" y1="965" x2="290" y2="965" stroke="#22d3ee" stroke-width="5" stroke-linecap="round"/><text x="298" y="969">Media (P2P)</text>
+    <line x1="420" y1="965" x2="460" y2="965" stroke="#a78bfa" stroke-width="2.5"/><text x="468" y="969">Signaling WebSocket</text>
+    <line x1="630" y1="965" x2="670" y2="965" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="2 5" stroke-linecap="round"/><text x="678" y="969">HTTPS requests</text>
+    <line x1="810" y1="965" x2="850" y2="965" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 4"/><text x="858" y="969">STUN lookup</text>
+    <line x1="960" y1="965" x2="1000" y2="965" stroke="#f59e0b" stroke-width="2" stroke-dasharray="8 6"/><text x="1008" y="969">TURN relay (fallback)</text>
+  </g>
+</svg>
